@@ -12,6 +12,17 @@ class AzDoClient:
             "Content-Type": "application/json",
             "Authorization": f"Basic {self._encode_pat()}",
         }
+        self._current_user_id: Optional[str] = None
+
+    def get_current_user_id(self) -> str:
+        if self._current_user_id:
+            return self._current_user_id
+
+        url = f"{self.base_url}/_apis/connectionData"
+        response = requests.get(url, headers=self.headers)
+        response.raise_for_status()
+        self._current_user_id = response.json()["authenticatedUser"]["id"]
+        return self._current_user_id
 
     def _encode_pat(self) -> str:
         return base64.b64encode(f":{self.pat}".encode("ascii")).decode("ascii")
@@ -87,19 +98,48 @@ class AzDoClient:
         self,
         repository_id: str,
         status: str = "Active",
-        creator_id: Optional[str] = None,
         top: Optional[int] = None,
+        include_reviewer: bool = False,
     ) -> List[Dict[str, Any]]:
         url = self._get_url(f"git/repositories/{repository_id}/pullrequests")
-        params = {"searchCriteria.status": status}
-        if creator_id:
-            params["searchCriteria.creatorId"] = creator_id
-        if top:
-            params["$top"] = top
+        current_user_id = self.get_current_user_id()
 
-        response = requests.get(url, headers=self.headers, params=params)
-        response.raise_for_status()
-        return response.json().get("value", [])
+        # Fetch PRs created by current user
+        params_creator = {
+            "searchCriteria.status": status,
+            "searchCriteria.creatorId": current_user_id,
+        }
+        if top:
+            params_creator["$top"] = top
+
+        response_creator = requests.get(
+            url, headers=self.headers, params=params_creator
+        )
+        response_creator.raise_for_status()
+        prs = response_creator.json().get("value", [])
+
+        if include_reviewer:
+            # Fetch PRs where current user is a reviewer
+            params_reviewer = {
+                "searchCriteria.status": status,
+                "searchCriteria.reviewerId": current_user_id,
+            }
+            if top:
+                params_reviewer["$top"] = top
+
+            response_reviewer = requests.get(
+                url, headers=self.headers, params=params_reviewer
+            )
+            response_reviewer.raise_for_status()
+            reviewer_prs = response_reviewer.json().get("value", [])
+
+            # Merge lists, avoiding duplicates
+            seen_ids = {pr["pullRequestId"] for pr in prs}
+            for pr in reviewer_prs:
+                if pr["pullRequestId"] not in seen_ids:
+                    prs.append(pr)
+
+        return prs
 
     def update_pr(
         self,
@@ -107,7 +147,7 @@ class AzDoClient:
         repository_id: str,
         title: Optional[str] = None,
         description: Optional[str] = None,
-        status: Optional[str] = None,
+        action: Optional[str] = None,
     ) -> Dict[str, Any]:
         url = self._get_url(f"git/repositories/{repository_id}/pullrequests/{pr_id}")
         payload = {}
@@ -115,8 +155,22 @@ class AzDoClient:
             payload["title"] = title
         if description:
             payload["description"] = description
-        if status:
-            payload["status"] = status
+
+        if action:
+            action = action.lower()
+            if action == "abandon":
+                payload["status"] = "abandoned"
+            elif action == "draft":
+                payload["isDraft"] = True
+            elif action == "publish":
+                payload["isDraft"] = False
+            elif action == "reactivate":
+                payload["status"] = "active"
+            else:
+                raise ValueError(
+                    f"Invalid action: {action}. "
+                    "Must be 'abandon', 'draft', 'publish', or 'reactivate'."
+                )
 
         if not payload:
             return self.get_pr(pr_id, repository_id)

@@ -4,9 +4,12 @@ A Model Context Protocol (MCP) server for managing Azure DevOps Pull Requests.
 
 ## Features
 
-- **Manage PRs**: Create, list, get details, and update Pull Requests.
-- **Collaborate**: Add and view comments on PR threads.
-- **Inspect**: View file changes and diffs.
+- **Create PR**: Create new pull requests with title, description, and linked work items.
+- **Get PR**: Retrieve detailed information about a specific PR.
+- **List PRs**: List PRs created by you (default) or where you are a reviewer.
+- **Update PR**: Update PR details or perform actions (abandon, draft, publish, reactivate).
+- **Comments**: Add and retrieve comments on PR threads.
+- **Diffs**: View file diffs and changed files in a PR.
 
 ## Quick Start
 

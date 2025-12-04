@@ -59,16 +59,23 @@ def get_pr(
 def list_prs(
     repository_id: Optional[str] = None,
     status: str = "Active",
-    creator_id: Optional[str] = None,
     top: Optional[int] = None,
+    include_reviewer: bool = False,
 ) -> str:
-    """List Pull Requests."""
+    """List Pull Requests. Defaults to PRs created by the current user.
+
+    Args:
+        repository_id: Repository ID or Name.
+        status: Filter by status (Active, Completed, Abandoned, All).
+        top: Limit number of results.
+        include_reviewer: If True, also include PRs where the user is a reviewer.
+    """
     repo_id = repository_id or settings.AZDO_REPO_ID
     if not repo_id:
         return "Error: repository_id is required"
 
     try:
-        prs = client.list_prs(repo_id, status, creator_id, top)
+        prs = client.list_prs(repo_id, status, top, include_reviewer)
         return str(prs)
     except Exception as e:
         return f"Error listing PRs: {str(e)}"
@@ -80,15 +87,23 @@ def update_pr(
     repository_id: Optional[str] = None,
     title: Optional[str] = None,
     description: Optional[str] = None,
-    status: Optional[str] = None,
+    action: Optional[str] = None,
 ) -> str:
-    """Update a Pull Request."""
+    """Update a Pull Request.
+
+    Args:
+        pull_request_id: ID of the PR.
+        repository_id: Repository ID or Name.
+        title: New title.
+        description: New description.
+        action: Action to perform: 'abandon', 'draft', 'publish', or 'reactivate'.
+    """
     repo_id = repository_id or settings.AZDO_REPO_ID
     if not repo_id:
         return "Error: repository_id is required"
 
     try:
-        pr = client.update_pr(pull_request_id, repo_id, title, description, status)
+        pr = client.update_pr(pull_request_id, repo_id, title, description, action)
         return f"PR Updated: {pr.get('pullRequestId')}"
     except Exception as e:
         return f"Error updating PR: {str(e)}"
