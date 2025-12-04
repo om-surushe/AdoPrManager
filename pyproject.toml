@@ -18,6 +18,10 @@ dependencies = [
     "twine"
 ]
 
+[project.urls]
+Repository = "https://github.com/om-surushe/ado-pr-manager"
+Homepage = "https://github.com/om-surushe/ado-pr-manager"
+
 [project.scripts]
 ado-pr-manager = "ado_pr_manager.server:main"
 
