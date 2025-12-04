@@ -60,7 +60,7 @@ The server is configured via environment variables (in `.env` or passed directly
 You can run the MCP server directly:
 
 ```bash
-python -m ado_pr_manager.server
+python3 -m ado_pr_manager.server
 ```
 
 ### Using with MCP Client
@@ -71,7 +71,7 @@ Add the server to your MCP client configuration (e.g., `claude_desktop_config.js
 {
   "mcpServers": {
     "ado-pr-manager": {
-      "command": "python",
+      "command": "python3",
       "args": [
         "-m",
         "ado_pr_manager.server"
