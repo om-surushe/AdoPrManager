@@ -1,6 +1,7 @@
 import requests
 import base64
 from typing import Any, Dict, List, Optional
+import difflib
 from .config import settings
 
 
@@ -238,20 +239,43 @@ class AzDoClient:
         return response.json()
 
     def get_file_diff(self, pr_id: int, repository_id: str, file_path: str) -> str:
-        # Getting the actual diff text can be tricky via API.
-        # We might need to fetch the file content from source and target and diff them,
-        # or use the internal diff endpoint if available.
-        # A common way is to get the file content from the PR's iteration.
-        # However, for simplicity, let's try to fetch the diff via the standard git
-        # API if possible, or just return the fact that it changed.
-        #
-        # Actually, the user asked for "Retrieve the diff for a PR".
-        # Let's implement a generic diff retrieval if possible.
-        #
-        # For now, let's implement a placeholder or a best-effort approach.
-        # We can use the `diffs` endpoint on the iteration.
-        pass
-        return "Diff retrieval not fully implemented yet."
+        # Get PR details to find source and target refs
+        pr = self.get_pr(pr_id, repository_id)
+        source_ref = pr["sourceRefName"]
+        target_ref = pr["targetRefName"]
+
+        # Helper to fetch file content
+        def get_content(ref_name: str) -> str:
+            url = self._get_url(
+                f"git/repositories/{repository_id}/items",
+                project=pr.get("repository", {}).get("project", {}).get("name"),
+            )
+            params = {
+                "path": file_path,
+                "versionDescriptor.version": ref_name.replace("refs/heads/", ""),
+                "versionDescriptor.versionType": "branch",
+                "includeContent": "true",
+            }
+            try:
+                response = requests.get(url, headers=self.headers, params=params)
+                response.raise_for_status()
+                return response.text
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 404:
+                    return ""  # File might not exist in this ref
+                raise
+
+        source_content = get_content(source_ref)
+        target_content = get_content(target_ref)
+
+        diff = difflib.unified_diff(
+            target_content.splitlines(),
+            source_content.splitlines(),
+            fromfile=f"a/{file_path}",
+            tofile=f"b/{file_path}",
+            lineterm="",
+        )
+        return "\n".join(diff)
 
 
 client = AzDoClient()

@@ -6,6 +6,27 @@ from .config import settings
 mcp = FastMCP("ado-pr-manager")
 
 
+def format_pr(pr: dict) -> str:
+    """Format a PR dictionary into a concise string."""
+    return (
+        f"ID: {pr.get('pullRequestId')}\n"
+        f"Title: {pr.get('title')}\n"
+        f"Status: {pr.get('status')}\n"
+        f"Creator: {pr.get('createdBy', {}).get('displayName')}\n"
+        f"Url: {pr.get('url')}\n"
+        f"Description: {pr.get('description', '')[:100]}..."
+    )
+
+
+def format_comment(comment: dict) -> str:
+    """Format a comment dictionary into a concise string."""
+    return (
+        f"ID: {comment.get('id')}\n"
+        f"Author: {comment.get('author', {}).get('displayName')}\n"
+        f"Content: {comment.get('content')}\n"
+    )
+
+
 @mcp.tool()
 def create_pr(
     title: str,
@@ -33,7 +54,7 @@ def create_pr(
             description=description,
             work_items=work_items,
         )
-        return f"PR Created: {pr.get('url')} (ID: {pr.get('pullRequestId')})"
+        return format_pr(pr)
     except Exception as e:
         return f"Error creating PR: {str(e)}"
 
@@ -50,7 +71,7 @@ def get_pr(
 
     try:
         pr = client.get_pr(pull_request_id, repo_id)
-        return str(pr)
+        return format_pr(pr)
     except Exception as e:
         return f"Error getting PR: {str(e)}"
 
@@ -76,7 +97,7 @@ def list_prs(
 
     try:
         prs = client.list_prs(repo_id, status, top, include_reviewer)
-        return str(prs)
+        return "\n---\n".join([format_pr(pr) for pr in prs])
     except Exception as e:
         return f"Error listing PRs: {str(e)}"
 
@@ -104,7 +125,7 @@ def update_pr(
 
     try:
         pr = client.update_pr(pull_request_id, repo_id, title, description, action)
-        return f"PR Updated: {pr.get('pullRequestId')}"
+        return format_pr(pr)
     except Exception as e:
         return f"Error updating PR: {str(e)}"
 
@@ -125,7 +146,7 @@ def add_comment(
         comment = client.add_comment(
             pull_request_id, repo_id, content, parent_comment_id
         )
-        return f"Comment added: {comment.get('id')}"
+        return format_comment(comment.get("comments", [{}])[0])
     except Exception as e:
         return f"Error adding comment: {str(e)}"
 
@@ -142,7 +163,16 @@ def get_pr_comments(
 
     try:
         comments = client.get_pr_comments(pull_request_id, repo_id)
-        return str(comments)
+        formatted_threads = []
+        for thread in comments:
+            thread_comments = thread.get("comments", [])
+            if not thread_comments:
+                continue
+            formatted_thread = "\n".join([format_comment(c) for c in thread_comments])
+            formatted_threads.append(
+                f"Thread ID: {thread.get('id')}\n{formatted_thread}"
+            )
+        return "\n---\n".join(formatted_threads)
     except Exception as e:
         return f"Error getting comments: {str(e)}"
 
@@ -159,7 +189,13 @@ def get_pr_changes(
 
     try:
         changes = client.get_pr_changes(pull_request_id, repo_id)
-        return str(changes)
+        formatted_changes = []
+        for change in changes.get("changeEntries", []):
+            item = change.get("item", {})
+            formatted_changes.append(
+                f"Type: {change.get('changeType')}\n" f"Path: {item.get('path')}\n"
+            )
+        return "\n---\n".join(formatted_changes)
     except Exception as e:
         return f"Error getting changes: {str(e)}"
 
