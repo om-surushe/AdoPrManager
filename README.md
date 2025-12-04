@@ -27,15 +27,13 @@ uv pip install ado-pr-manager
 
 ### Configuration
 
-Set the following environment variables:
+Set the following environment variables in a `.env` file:
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `AZDO_ORG_URL` | Organization URL (e.g., `https://dev.azure.com/myorg`) | Yes |
-| `AZDO_PAT` | Personal Access Token | Yes |
-| `AZDO_REPO_ID` | Default Repository ID or Name (alias: `AZDO_REPO`) | Optional |
-| `AZDO_PROJECT` | Default Project Name | Optional |
-| `AZDO_DEFAULT_BRANCH` | Default target branch (default: `main`) | Optional |
+- `AZDO_ORG_URL`: Organization URL (e.g., `https://dev.azure.com/myorg`)
+- `AZDO_PAT`: Personal Access Token (Requires **Code** and **Pull Request** Read/Write access)
+- `AZDO_PROJECT`: (Optional) Default project name
+- `AZDO_REPO_ID`: (Optional) Default repository name or ID (can also use `AZDO_REPO`)
+- `AZDO_DEFAULT_BRANCH`: (Optional) Default target branch (default: `main`)
 
 ### Usage with Claude Desktop
 
@@ -50,7 +48,8 @@ Add to your `claude_desktop_config.json`:
       "env": {
         "AZDO_ORG_URL": "https://dev.azure.com/myorg",
         "AZDO_PAT": "your-token",
-        "AZDO_REPO_ID": "your-repo"
+        "AZDO_PROJECT": "my-project",
+        "AZDO_REPO_ID": "my-repo"
       }
     }
   }
