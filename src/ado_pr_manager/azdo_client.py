@@ -34,7 +34,7 @@ class AzDoClient:
             if project
             else (f"/{settings.AZDO_PROJECT}" if settings.AZDO_PROJECT else "")
         )
-        return f"{self.base_url}{project_part}/_apis/{path}"
+        return f"{self.base_url}{project_part}/_apis/{path}?api-version=7.1"
 
     def create_pr(
         self,

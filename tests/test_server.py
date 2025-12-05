@@ -26,10 +26,15 @@ def mock_client():
 
 
 def test_create_pr(mock_client):
-    mock_client.create_pr.return_value = {"url": "http://azdo/pr/1", "pullRequestId": 1}
+    mock_client.create_pr.return_value = {
+        "url": "http://azdo/pr/1",
+        "pullRequestId": 1,
+        "title": "Test PR",
+        "status": "Active",
+    }
     result = create_pr("Test PR", "feature/1")
-    assert "PR Created" in result
     assert "ID: 1" in result
+    assert "Title: Test PR" in result
     mock_client.create_pr.assert_called_once_with(
         title="Test PR",
         source_branch="feature/1",
@@ -41,46 +46,68 @@ def test_create_pr(mock_client):
 
 
 def test_get_pr(mock_client):
-    mock_client.get_pr.return_value = {"pullRequestId": 1, "title": "Test PR"}
+    mock_client.get_pr.return_value = {
+        "pullRequestId": 1,
+        "title": "Test PR",
+        "status": "Active",
+    }
     result = get_pr(1)
-    assert "'pullRequestId': 1" in result
+    assert "ID: 1" in result
+    assert "Title: Test PR" in result
     mock_client.get_pr.assert_called_once_with(1, "test-repo")
 
 
 def test_list_prs(mock_client):
-    mock_client.list_prs.return_value = [{"pullRequestId": 1}]
+    mock_client.list_prs.return_value = [
+        {"pullRequestId": 1, "title": "PR 1", "status": "Active"},
+        {"pullRequestId": 2, "title": "PR 2", "status": "Active"},
+    ]
     result = list_prs()
-    assert "[{'pullRequestId': 1}]" in result
-    mock_client.list_prs.assert_called_once_with("test-repo", "Active", None, None)
+    assert "ID: 1" in result
+    assert "ID: 2" in result
+    mock_client.list_prs.assert_called_once_with("test-repo", "Active", None, False)
 
 
 def test_update_pr(mock_client):
-    mock_client.update_pr.return_value = {"pullRequestId": 1, "status": "Completed"}
-    result = update_pr(1, status="Completed")
-    assert "PR Updated: 1" in result
-    mock_client.update_pr.assert_called_once_with(
-        1, "test-repo", None, None, "Completed"
-    )
+    mock_client.update_pr.return_value = {
+        "pullRequestId": 1,
+        "title": "Test PR",
+        "status": "Abandoned",
+    }
+    result = update_pr(1, action="abandon")
+    assert "ID: 1" in result
+    assert "Status: Abandoned" in result
+    mock_client.update_pr.assert_called_once_with(1, "test-repo", None, None, "abandon")
 
 
 def test_add_comment(mock_client):
-    mock_client.add_comment.return_value = {"id": 100}
+    mock_client.add_comment.return_value = {
+        "comments": [{"id": 100, "content": "Nice code"}]
+    }
     result = add_comment(1, "Nice code")
-    assert "Comment added: 100" in result
+    assert "ID: 100" in result
+    assert "Content: Nice code" in result
     mock_client.add_comment.assert_called_once_with(1, "test-repo", "Nice code", None)
 
 
 def test_get_pr_comments(mock_client):
-    mock_client.get_pr_comments.return_value = [{"id": 100, "content": "Nice code"}]
+    mock_client.get_pr_comments.return_value = [
+        {"id": 10, "comments": [{"id": 100, "content": "Nice code"}]}
+    ]
     result = get_pr_comments(1)
-    assert "[{'id': 100" in result
+    assert "Thread ID: 10" in result
+    assert "ID: 100" in result
+    assert "Content: Nice code" in result
     mock_client.get_pr_comments.assert_called_once_with(1, "test-repo")
 
 
 def test_get_pr_changes(mock_client):
-    mock_client.get_pr_changes.return_value = {"changes": []}
+    mock_client.get_pr_changes.return_value = {
+        "changeEntries": [{"changeType": "edit", "item": {"path": "/foo.py"}}]
+    }
     result = get_pr_changes(1)
-    assert "'changes': []" in result
+    assert "Type: edit" in result
+    assert "Path: /foo.py" in result
     mock_client.get_pr_changes.assert_called_once_with(1, "test-repo")
 
 
